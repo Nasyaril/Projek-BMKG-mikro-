@@ -1,4 +1,5 @@
 <?php
+if (defined('DB_HOST')) return; // sudah dimuat sebelumnya, jangan dieksekusi lagi
 // Koneksi PDO + konfigurasi WA Gateway. Ubah sesuai lingkungan XAMPP/hosting.
 const DB_HOST = 'localhost', DB_NAME = 'sigap_db', DB_USER = 'root', DB_PASS = '';
 // Kosongkan WA_API_URL untuk mode simulasi (pesan hanya dikembalikan, tidak dikirim).
