@@ -22,6 +22,7 @@ try {
 
 const APP_DEBUG = true; // true = pesan error server ditampilkan; set false saat produksi
 
+if (!function_exists('api_boot')) {
 // Dipanggil di awal tiap file api/*: warning PHP tidak boleh mencemari JSON, error apa pun dikembalikan sebagai JSON.
 function api_boot(): void {
     ini_set('display_errors', '0');
@@ -60,3 +61,4 @@ function json_out(array $data, int $code = 200): void {
     exit;
 }
 function e(?string $s): string { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
+}
