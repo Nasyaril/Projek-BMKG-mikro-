@@ -22,7 +22,7 @@ if (!$cur || !in_array($cur, $allowed, true)) {
 }
 
 $new = $map[$act];
-$pdo->prepare('UPDATE reports SET current_status=?, admin_instruction=COALESCE(?, admin_instruction) WHERE id=?')
+$pdo->prepare('UPDATE reports SET current_status=?, admin_instruction=CONCAT_WS(CHAR(10), admin_instruction, ?) WHERE id=?')
     ->execute([$new, $note ?: null, $id]);
 $pdo->prepare('INSERT INTO status_history (report_id,status_name,changed_by_user_id) VALUES (?,?,?)')
     ->execute([$id, $new, $_SESSION['uid']]);

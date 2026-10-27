@@ -41,6 +41,7 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
 <symbol id="i-up" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
 </defs></svg>
 
 <div id="bmkg-bar" role="alert"><span></span></div>
@@ -143,11 +144,11 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
   <h3 style="color:var(--brand)"><?= ic('alert') ?> Nomor Darurat</h3>
   <p style="font-size:.85rem;color:var(--muted)">Nyawa terancam? Segera hubungi nomor berikut (gratis).</p>
   <ul class="numlist">
-    <li><b>112</b><span>Panggilan darurat terpadu (belum tersedia di semua daerah)</span></li>
-    <li><b>113</b><span>Pemadam kebakaran</span></li>
-    <li><b>119</b><span>Ambulans / darurat medis (juga 118)</span></li>
-    <li><b>110</b><span>Polisi</span></li>
-    <li><b>115</b><span>Basarnas: pencarian dan pertolongan (SAR)</span></li>
+    <li><b>112</b><span>Panggilan darurat terpadu (belum tersedia di semua daerah)</span><button type="button" class="callbtn" data-num="112" data-name="Panggilan darurat terpadu" aria-label="Panggil 112 (Panggilan darurat terpadu)"><?= ic('phone') ?></button></li>
+    <li><b>113</b><span>Pemadam kebakaran</span><button type="button" class="callbtn" data-num="113" data-name="Pemadam kebakaran" aria-label="Panggil 113 (Pemadam kebakaran)"><?= ic('phone') ?></button></li>
+    <li><b>119</b><span>Ambulans / darurat medis (juga 118)</span><button type="button" class="callbtn" data-num="119" data-name="Ambulans / darurat medis" aria-label="Panggil 119 (Ambulans / darurat medis)"><?= ic('phone') ?></button></li>
+    <li><b>110</b><span>Polisi</span><button type="button" class="callbtn" data-num="110" data-name="Polisi" aria-label="Panggil 110 (Polisi)"><?= ic('phone') ?></button></li>
+    <li><b>115</b><span>Basarnas: pencarian dan pertolongan (SAR)</span><button type="button" class="callbtn" data-num="115" data-name="Basarnas (SAR)" aria-label="Panggil 115 (Basarnas (SAR))"><?= ic('phone') ?></button></li>
   </ul>
   <button type="button" class="btn-primary wide" id="sos-close">Tutup</button>
 </div></div>
