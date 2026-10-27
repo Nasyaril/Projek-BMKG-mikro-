@@ -89,7 +89,7 @@ $('#ok-status').onclick = () => openStatus($('#ok-t').textContent, $('#ok-c').te
 $('#ok-detail').onclick = $('#ok-status').onclick;
 
 // ---- Cek status: hasil + timeline + pembaruan penanganan ----
-const TL = {menunggu: 'Laporan Diterima', diverifikasi: 'Diverifikasi', dieskalasi: 'Dieskalasi ke Instansi', diproses: 'Sedang Ditangani', selesai: 'Selesai', ditolak: 'Ditolak'};
+const TL = {darurat: 'Sinyal Darurat Diterima', menunggu: 'Laporan Diterima', diverifikasi: 'Diverifikasi', dieskalasi: 'Dieskalasi ke Instansi', diproses: 'Sedang Ditangani', selesai: 'Selesai', ditolak: 'Ditolak'};
 function openStatus(t, c) { $('#st-t').value = t; $('#st-c').value = c; go('status'); $('#status-form').requestSubmit(); }
 $('#status-form').addEventListener('submit', async ev => {
   ev.preventDefault();
@@ -125,13 +125,13 @@ async function renderHistory() {
 // ---- Notifikasi: tab Semua / Laporan Saya / Sistem ----
 let nFilter = 'all';
 $('#n-tabs').onclick = e => { if (!e.target.dataset.f) return; nFilter = e.target.dataset.f; document.querySelectorAll('#n-tabs button').forEach(b => b.classList.toggle('on', b === e.target)); renderNotif(); };
-const NMSG = {menunggu: ['Laporan berhasil dikirim!', 'check'], diverifikasi: ['Status laporan diperbarui', 'pin'], dieskalasi: ['Laporan dieskalasi ke instansi', 'alert'], diproses: ['Laporan sedang ditangani', 'pin'], selesai: ['Laporan selesai', 'check'], ditolak: ['Laporan ditolak', 'alert']};
+const NMSG = {darurat: ['Sinyal darurat terkirim', 'alert'], menunggu: ['Laporan berhasil dikirim!', 'check'], diverifikasi: ['Status laporan diperbarui', 'pin'], dieskalasi: ['Laporan dieskalasi ke instansi', 'alert'], diproses: ['Laporan sedang ditangani', 'pin'], selesai: ['Laporan selesai', 'check'], ditolak: ['Laporan ditolak', 'alert']};
 const short = s => { const d = new Date(s.replace(' ', 'T')); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}) : d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}); };
 async function renderNotif() {
   const box = $('#notif-list'); box.innerHTML = '<p>Memuat…</p>';
   const items = [];
   (await loadMine()).forEach(x => {
-    x.history.forEach(h => items.push({k: 'mine', time: h.change_time, icon: NMSG[h.status_name][1], title: NMSG[h.status_name][0],
+    x.history.forEach(h => items.push({k: 'mine', time: h.change_time, icon: (NMSG[h.status_name] || ['', 'pin'])[1], title: (NMSG[h.status_name] || ['Status diperbarui'])[0],
       text: h.status_name === 'menunggu' ? `Nomor laporan: ${x.report.ticket_number}\nKode akses: ${x.code}` : x.report.title, t: x.report.ticket_number, c: x.code}));
     if (x.report.current_status === 'menunggu') items.push({k: 'mine', time: x.report.created_at, icon: 'bell', title: 'Laporan Anda sedang diverifikasi', text: 'Admin sedang memeriksa laporan Anda.', t: x.report.ticket_number, c: x.code});
   });

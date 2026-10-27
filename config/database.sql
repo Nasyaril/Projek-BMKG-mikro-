@@ -28,6 +28,8 @@ CREATE TABLE reports (
   photo_before_path VARCHAR(255) NULL,
   admin_instruction TEXT NULL,
   upvote_count INT NOT NULL DEFAULT 0,        -- tombol "Saya Terdampak"
+  is_emergency TINYINT(1) NOT NULL DEFAULT 0, -- 1 = sinyal DARURAT (tanpa konfirmasi RT/RW)
+  reporter_ip_hash CHAR(64) NULL,             -- hash IP, hanya untuk pembatas penyalahgunaan
   current_status ENUM('menunggu','diverifikasi','diproses','selesai','ditolak') NOT NULL DEFAULT 'menunggu',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

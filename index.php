@@ -48,6 +48,7 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
   <button id="back" class="icon" data-go="home" aria-label="Kembali"><?= ic('back') ?></button>
   <div id="brand"><span class="logo"><?= ic('shield') ?>SIGAP</span><button type="button" class="chip" id="area-btn" aria-haspopup="dialog"><?= ic('pin') ?><span id="area-t">Pilih wilayah</span><?= ic('down') ?></button></div>
   <h1 id="ptitle"></h1>
+  <button id="sos-btn" class="sos-btn" aria-label="Darurat">SOS</button>
   <button id="theme" class="icon" aria-label="Ganti mode gelap/terang"><svg class="i"><use href="#i-moon"/></svg></button>
   <button id="bell" class="icon" data-go="notif" aria-label="Notifikasi"><?= ic('bell') ?><i class="dot-o" id="bell-dot" hidden></i></button>
 </header>
@@ -56,6 +57,7 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
   <!-- Beranda & Peta -->
   <section id="v-home">
     <button class="banner" data-go="form"><?= ic('camera') ?><span><b>Buat Laporan</b><small>Ambil foto, pilih kategori, kirim lokasi</small></span></button>
+    <button class="banner sos-banner" id="sos-open"><?= ic('alert') ?><span><b>Nomor Darurat</b><small>Daftar nomor yang bisa dihubungi segera</small></span></button>
     <div class="stats"><div class="sec stat"><b id="st-done">0</b>Laporan diselesaikan</div><div class="sec stat"><b id="st-avg">0</b>Rata-rata respon (menit)</div></div>
     <div id="map"></div>
     <div class="legend"><span class="badge">Tinggi</span><span class="badge yellow">Sedang</span><span class="badge green">Rendah</span></div>
@@ -136,6 +138,20 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
   <button data-go="setting" data-t="setting"><?= ic('gear') ?><span>Setting</span></button>
 </nav>
 
+<!-- Nomor darurat (sementara: daftar teks, tanpa input) -->
+<div class="modal" id="sos-modal" role="dialog" aria-label="Nomor darurat"><div class="box">
+  <h3 style="color:var(--brand)"><?= ic('alert') ?> Nomor Darurat</h3>
+  <p style="font-size:.85rem;color:var(--muted)">Nyawa terancam? Segera hubungi nomor berikut (gratis).</p>
+  <ul class="numlist">
+    <li><b>112</b><span>Panggilan darurat terpadu (belum tersedia di semua daerah)</span></li>
+    <li><b>113</b><span>Pemadam kebakaran</span></li>
+    <li><b>119</b><span>Ambulans / darurat medis (juga 118)</span></li>
+    <li><b>110</b><span>Polisi</span></li>
+    <li><b>115</b><span>Basarnas: pencarian dan pertolongan (SAR)</span></li>
+  </ul>
+  <button type="button" class="btn-primary wide" id="sos-close">Tutup</button>
+</div></div>
+
 <!-- Pemilih wilayah -->
 <div class="modal" id="area-modal" role="dialog" aria-label="Pilih wilayah"><div class="box">
   <h3>Pilih wilayah</h3><p style="color:var(--muted);font-size:.85rem">Peta, daftar laporan, dan laporan baru akan mengikuti wilayah ini.</p>
@@ -149,5 +165,6 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js"></script>
 <script src="assets/js/map.js?v=<?= filemtime(__DIR__ . '/assets/js/map.js') ?>"></script>
 <script src="assets/js/main.js?v=<?= filemtime(__DIR__ . '/assets/js/main.js') ?>"></script>
+<script src="assets/js/sos.js?v=<?= filemtime(__DIR__ . '/assets/js/sos.js') ?>"></script>
 </body>
 </html>

@@ -25,6 +25,10 @@ if ($logged) {
     $alerts = $pdo->query('SELECT * FROM official_alerts ORDER BY `datetime` DESC LIMIT 8')->fetchAll();
     $recent = $pdo->query('SELECT ticket_number, title, category, current_status, created_at FROM reports ORDER BY created_at DESC LIMIT 6')->fetchAll();
     $badge = ['menunggu' => 'bg-gray-200 text-gray-700', 'diverifikasi' => 'bg-blue-100 text-blue-700', 'diproses' => 'bg-yellow-100 text-yellow-700', 'selesai' => 'bg-green-100 text-green-700', 'ditolak' => 'bg-red-100 text-red-700'];
+    // Sinyal darurat aktif (masuk tanpa konfirmasi RT/RW) + penanda terbaru untuk polling
+    $sos = $pdo->query("SELECT * FROM reports WHERE is_emergency=1 AND current_status IN ('diverifikasi','diproses') ORDER BY created_at DESC")->fetchAll();
+    $sosLatest = (int)$pdo->query('SELECT COALESCE(MAX(id),0) FROM reports WHERE is_emergency=1')->fetchColumn();
+    $waNum = fn(string $p) => preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $p));
 }
 $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
 ?>
@@ -62,6 +66,7 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
   <div class="text-2xl font-extrabold mb-8">SIGAP</div>
   <nav class="flex-1 space-y-1 text-sm font-semibold">
     <button data-nav="dashboard" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/10 transition">📊 Dashboard</button>
+    <button data-nav="darurat" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/10 transition flex justify-between">🚨 Darurat<?php if ($sos): ?><span class="bg-red-500 text-xs rounded-full px-2 py-0.5 animate-pulse"><?= count($sos) ?></span><?php endif; ?></button>
     <button data-nav="triage" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/10 transition flex justify-between">📋 Triage laporan<?php if ($wait): ?><span class="bg-red-500 text-xs rounded-full px-2 py-0.5"><?= $wait ?></span><?php endif; ?></button>
     <button data-nav="alerts" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/10 transition">🌐 Peringatan resmi</button>
     <a href="index.php" target="_blank" class="block px-3 py-2.5 rounded-lg hover:bg-white/10 transition">🏠 Lihat situs warga</a>
@@ -80,12 +85,14 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
   </header>
   <div class="md:hidden flex gap-2 px-6 pt-4 overflow-x-auto text-sm font-semibold">
     <button data-nav="dashboard" class="pill px-4 py-2 rounded-full bg-white dark:bg-slate-800 shadow whitespace-nowrap">Dashboard</button>
+    <button data-nav="darurat" class="pill px-4 py-2 rounded-full bg-red-600 text-white shadow whitespace-nowrap">🚨 Darurat<?= $sos ? " (" . count($sos) . ")" : '' ?></button>
     <button data-nav="triage" class="pill px-4 py-2 rounded-full bg-white dark:bg-slate-800 shadow whitespace-nowrap">Triage<?= $wait ? " ($wait)" : '' ?></button>
     <button data-nav="alerts" class="pill px-4 py-2 rounded-full bg-white dark:bg-slate-800 shadow whitespace-nowrap">Peringatan resmi</button>
   </div>
 
   <main class="p-6">
     <div data-view="dashboard" class="space-y-8">
+    <?php if ($sos): ?><button data-nav="darurat" class="w-full text-left bg-red-600 text-white rounded-2xl p-4 shadow-lg animate-pulse font-semibold">🚨 <?= count($sos) ?> sinyal darurat aktif — tangani sekarang →</button><?php endif; ?>
     <section class="grid grid-cols-2 xl:grid-cols-4 gap-4">
       <?php foreach ([['Total laporan', $total, '📋', 'text-brand dark:text-blue-400'], ['Perlu verifikasi', $wait, '⏳', 'text-red-500'], ['Diproses', $proc, '🛠️', 'text-yellow-500'], ['Selesai', $done, '✅', 'text-green-500']] as [$lbl, $n, $emo, $cls]): ?>
         <div class="glass relative overflow-hidden rounded-2xl p-5 shadow-md">
@@ -107,6 +114,32 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
         </tbody></table></div>
     </section>
     </div>
+
+    <section id="darurat" data-view="darurat" class="hidden space-y-4">
+      <h2 class="font-extrabold text-lg">Sinyal Darurat Aktif</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Masuk langsung tanpa konfirmasi RT/RW. Hubungi pelapor, koordinasikan penanganan, dan tandai palsu bila terbukti.</p>
+      <?php foreach ($sos as $s): $tel = preg_replace('/[^0-9+]/', '', $s['reporter_contact']); ?>
+        <article class="bg-white dark:bg-slate-800 rounded-2xl shadow-md border-l-8 border-red-500 p-5">
+          <div class="flex flex-wrap justify-between gap-2">
+            <h3 class="font-extrabold text-red-600"><?= e($s['title']) ?></h3>
+            <span class="text-xs px-2.5 py-1 rounded-full font-semibold <?= $s['current_status'] === 'diproses' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700' ?>"><?= $s['current_status'] === 'diproses' ? 'Sedang ditangani' : 'Belum ditangani' ?></span>
+          </div>
+          <p class="text-sm mt-1"><b><?= e($s['reporter_name'] ?: 'Tanpa nama') ?></b> • <?= e($s['reporter_contact']) ?> • <?= e(date('d M H:i', strtotime($s['created_at']))) ?></p>
+          <p class="text-sm mt-2"><?= e($s['description']) ?></p>
+          <p class="text-xs text-gray-500 mt-1"><?= e(trim(($s['district'] ?? '') . ', ' . ($s['regency'] ?? ''), ', ')) ?> • <?= e($s['latitude']) ?>, <?= e($s['longitude']) ?></p>
+          <div class="flex flex-wrap gap-2 mt-3 text-sm font-semibold">
+            <a href="tel:<?= e($tel) ?>" class="px-4 py-2.5 rounded-lg bg-red-600 text-white hover:opacity-90 transition">📞 Telepon</a>
+            <a href="https://wa.me/<?= e($waNum($s['reporter_contact'])) ?>" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-lg bg-green-600 text-white hover:opacity-90 transition">WhatsApp</a>
+            <a href="https://maps.google.com/?q=<?= e($s['latitude']) ?>,<?= e($s['longitude']) ?>" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-lg bg-brand text-white hover:opacity-90 transition">📍 Buka peta</a>
+          </div>
+          <div class="flex flex-wrap gap-2 mt-3 text-sm font-semibold border-t dark:border-slate-700 pt-3">
+            <?php if ($s['current_status'] === 'diverifikasi'): ?><button data-id="<?= (int)$s['id'] ?>" data-act="proses" class="sos-act px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 hover:brightness-95 transition">Tandai sedang ditangani</button><?php endif; ?>
+            <button data-id="<?= (int)$s['id'] ?>" data-act="selesai" class="sos-act px-4 py-2 rounded-lg border-2 border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition">Selesai</button>
+            <button data-id="<?= (int)$s['id'] ?>" data-act="palsu" class="sos-act px-4 py-2 rounded-lg border-2 border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition">Laporan palsu</button>
+          </div>
+        </article>
+      <?php endforeach; if (!$sos): ?><div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-8 text-center text-gray-500">Tidak ada sinyal darurat aktif. 🎉</div><?php endif; ?>
+    </section>
 
     <section id="triage" data-view="triage" class="hidden">
       <h2 class="font-extrabold text-lg mb-3">Triage — menunggu verifikasi</h2>
@@ -178,7 +211,7 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
 <script>
   const $ = s => document.querySelector(s);
   // Navigasi antar tampilan (tanpa reload); tampilan terakhir diingat lewat #hash
-  const TITLES = {dashboard: 'Dashboard Admin', triage: 'Triage Laporan', alerts: 'Peringatan Resmi'};
+  const TITLES = {darurat: 'Sinyal Darurat', dashboard: 'Dashboard Admin', triage: 'Triage Laporan', alerts: 'Peringatan Resmi'};
   function show(v) {
     if (!TITLES[v]) v = 'dashboard';
     document.querySelectorAll('[data-view]').forEach(el => el.classList.toggle('hidden', el.dataset.view !== v));
@@ -187,6 +220,29 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
   }
   document.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => show(b.dataset.nav));
   show(location.hash.slice(1));
+
+  // Aksi sinyal darurat: sedang ditangani / selesai / palsu
+  document.querySelectorAll('.sos-act').forEach(b => b.onclick = async () => {
+    const t = {proses: 'Tandai sedang ditangani?', selesai: 'Tandai selesai?', palsu: 'Tandai sebagai laporan palsu? Titik akan dihapus dari peta.'}[b.dataset.act];
+    if (!(await Swal.fire({title: t, icon: 'question', showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal'})).isConfirmed) return;
+    const fd = new FormData(); fd.append('id', b.dataset.id); fd.append('action', b.dataset.act);
+    const r = await (await fetch('api/emergency_action.php', {method: 'POST', body: fd})).json();
+    if (r.ok) location.reload(); else Swal.fire('Gagal', r.message, 'error');
+  });
+
+  // Polling tiap 15 detik: bunyi + peringatan saat ada sinyal darurat baru
+  let lastSos = <?= $sosLatest ?>;
+  function beep() { try { const c = new (window.AudioContext || window.webkitAudioContext)(); [0, .25, .5].forEach(t => { const o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.value = .25; o.start(c.currentTime + t); o.stop(c.currentTime + t + .15); }); } catch {} }
+  setInterval(async () => {
+    try {
+      const r = await (await fetch('api/emergency_poll.php')).json();
+      if (r.ok && r.latest > lastSos) {
+        lastSos = r.latest; beep(); document.title = '🚨 DARURAT BARU — SIGAP Admin';
+        await Swal.fire({icon: 'warning', title: 'Sinyal darurat baru!', text: 'Buka tab Darurat dan hubungi pelapor.', confirmButtonText: 'Buka'});
+        location.hash = 'darurat'; location.reload();
+      }
+    } catch {}
+  }, 15000);
 
   $('#theme').onclick = () => { const d = document.documentElement.classList.toggle('dark'); try { localStorage.setItem('sigap_theme', d ? 'dark' : 'light'); } catch {} };
 

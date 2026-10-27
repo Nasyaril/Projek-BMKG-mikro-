@@ -5,21 +5,6 @@ session_start();
 if (($_SESSION['role'] ?? '') !== 'admin') json_out(['ok' => false, 'message' => 'Akses ditolak'], 403);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_out(['ok' => false, 'message' => 'Metode tidak diizinkan'], 405);
 
-// Kirim pesan ke WA Gateway lewat cURL POST. Mode simulasi jika WA_API_URL / target kosong.
-function send_wa(string $msg, string $target): array {
-    if (WA_API_URL === '' || $target === '') return ['sent' => false, 'simulated' => true];
-    $ch = curl_init(WA_API_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => ['Authorization: ' . WA_TOKEN],
-        CURLOPT_POSTFIELDS => http_build_query(['target' => $target, 'message' => $msg]),
-    ]);
-    curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    return ['sent' => $code >= 200 && $code < 300, 'simulated' => false];
-}
-
 $id     = filter_var($_POST['id'] ?? '', FILTER_VALIDATE_INT);
 $action = $_POST['action'] ?? '';
 $instr  = trim($_POST['instruction'] ?? '');

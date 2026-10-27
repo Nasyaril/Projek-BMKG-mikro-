@@ -4,6 +4,8 @@ const DB_HOST = 'localhost', DB_NAME = 'sigap_db', DB_USER = 'root', DB_PASS = '
 // Kosongkan WA_API_URL untuk mode simulasi (pesan hanya dikembalikan, tidak dikirim).
 const AREA_NAME = 'Kec. Sukajaya'; // label wilayah layanan di header
 const WA_API_URL = '', WA_TOKEN = '', WA_TARGET = '';          // grup warga
+const WA_TARGET_DARURAT = '';  // grup responder (admin/petugas/RT/RW) yang menerima sinyal DARURAT
+const IP_SALT = 'ganti-dengan-teks-acak-panjang'; // garam hash IP (pembatas penyalahgunaan)
 const WA_TARGET_INSTANSI = ''; // kontak instansi (BPBD/PLN/dll) untuk eskalasi
 
 try {
@@ -32,6 +34,21 @@ function api_boot(): void {
         if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && !headers_sent())
             json_out(['ok' => false, 'message' => APP_DEBUG ? 'Error server: ' . $e['message'] : 'Terjadi kesalahan di server.'], 500);
     });
+}
+
+// Kirim pesan ke WA Gateway lewat cURL POST. Mode simulasi jika WA_API_URL / target kosong.
+function send_wa(string $msg, string $target): array {
+    if (WA_API_URL === '' || $target === '') return ['sent' => false, 'simulated' => true];
+    $ch = curl_init(WA_API_URL);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10,
+        CURLOPT_HTTPHEADER => ['Authorization: ' . WA_TOKEN],
+        CURLOPT_POSTFIELDS => http_build_query(['target' => $target, 'message' => $msg]),
+    ]);
+    curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return ['sent' => $code >= 200 && $code < 300, 'simulated' => false];
 }
 
 function json_out(array $data, int $code = 200): void {
