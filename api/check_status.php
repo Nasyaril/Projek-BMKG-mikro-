@@ -9,7 +9,7 @@ $r = $st->fetch();
 if (!$r || !hash_equals($r['access_code'], $c)) { usleep(400000); json_out(['ok' => false, 'message' => 'Nomor laporan atau kode akses tidak cocok.'], 404); }
 $h = $pdo->prepare('SELECT status_name, change_time FROM status_history WHERE report_id=? ORDER BY change_time, id');
 $h->execute([$r['id']]);
-$a = $pdo->prepare('SELECT photo_after_path, completed_at FROM assignments WHERE report_id=? ORDER BY id');
+$a = $pdo->prepare('SELECT handler_name, photo_after_path, completed_at FROM assignments WHERE report_id=? ORDER BY id');
 $a->execute([$r['id']]);
 $assign = $a->fetchAll();
 unset($r['id'], $r['access_code']);

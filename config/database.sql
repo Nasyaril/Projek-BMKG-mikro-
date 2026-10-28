@@ -46,6 +46,7 @@ CREATE TABLE assignments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   report_id INT NOT NULL,
   assigned_to_user_id INT NOT NULL,
+  handler_name VARCHAR(100) NULL,              -- pihak penangani yang dipilih admin (tampil di Cek Status)
   photo_after_path VARCHAR(255) NULL,
   completed_at TIMESTAMP NULL,
   FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,

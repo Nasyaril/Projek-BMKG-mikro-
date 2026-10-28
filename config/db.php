@@ -7,6 +7,7 @@ const WA_API_URL = '', WA_TOKEN = '', WA_TARGET = '';          // grup warga
 const WA_TARGET_DARURAT = '';  // grup responder (admin/petugas/RT/RW) yang menerima sinyal DARURAT
 const IP_SALT = 'ganti-dengan-teks-acak-panjang'; // garam hash IP (pembatas penyalahgunaan)
 const WA_TARGET_INSTANSI = ''; // kontak instansi (BPBD/PLN/dll) untuk eskalasi
+const WA_SIMULASI = true; // true = SEMUA pesan WA hanya simulasi (tidak dikirim ke mana pun), walau WA_API_URL terisi
 
 try {
     $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4', DB_USER, DB_PASS, [
@@ -38,7 +39,7 @@ function api_boot(): void {
 
 // Kirim pesan ke WA Gateway lewat cURL POST. Mode simulasi jika WA_API_URL / target kosong.
 function send_wa(string $msg, string $target): array {
-    if (WA_API_URL === '' || $target === '') return ['sent' => false, 'simulated' => true];
+    if (WA_SIMULASI || WA_API_URL === '' || $target === '') return ['sent' => false, 'simulated' => true];
     $ch = curl_init(WA_API_URL);
     curl_setopt_array($ch, [
         CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10,

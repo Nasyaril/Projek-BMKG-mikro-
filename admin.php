@@ -31,7 +31,8 @@ if ($logged) {
     $sosLatest = (int)$pdo->query('SELECT COALESCE(MAX(id),0) FROM reports WHERE is_emergency=1')->fetchColumn();
     $waNum = fn(string $p) => preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $p));
     // Laporan yang sudah diverifikasi dan menunggu/sedang ditangani di lapangan (darurat paling atas, lalu prioritas)
-    $active = $pdo->query("SELECT id, ticket_number, title, priority, current_status, is_emergency, district, regency, created_at FROM reports
+    $active = $pdo->query("SELECT id, ticket_number, title, category, priority, current_status, is_emergency, district, regency, created_at,
+                           (SELECT handler_name FROM assignments a WHERE a.report_id=reports.id ORDER BY a.id DESC LIMIT 1) AS handler FROM reports
                            WHERE current_status IN ('diverifikasi','diproses') ORDER BY is_emergency DESC, FIELD(priority,'tinggi','sedang','rendah'), created_at")->fetchAll();
     $statusLbl = ['menunggu' => 'Menunggu verifikasi', 'diverifikasi' => 'Terverifikasi', 'diproses' => 'Diproses', 'selesai' => 'Selesai', 'ditolak' => 'Ditolak'];
     $prioBadge = ['tinggi' => 'bg-red-100 text-red-700', 'sedang' => 'bg-yellow-100 text-yellow-700', 'rendah' => 'bg-green-100 text-green-700'];
@@ -141,8 +142,8 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
           <p class="text-sm mt-2"><?= e($s['description']) ?></p>
           <p class="text-xs text-gray-500 mt-1"><?= e(trim(($s['district'] ?? '') . ', ' . ($s['regency'] ?? ''), ', ')) ?> • <?= e($s['latitude']) ?>, <?= e($s['longitude']) ?></p>
           <div class="flex flex-wrap gap-2 mt-3 text-sm font-semibold">
-            <a href="tel:<?= e($tel) ?>" class="px-4 py-2.5 rounded-lg bg-red-600 text-white hover:opacity-90 transition">📞 Telepon</a>
-            <a href="https://wa.me/<?= e($waNum($s['reporter_contact'])) ?>" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-lg bg-green-600 text-white hover:opacity-90 transition">WhatsApp</a>
+            <button type="button" data-kind="telepon" data-to="<?= e($s['reporter_contact']) ?>" class="sim-contact px-4 py-2.5 rounded-lg bg-red-600 text-white hover:opacity-90 transition">📞 Telepon</button>
+            <button type="button" data-kind="whatsapp" data-to="<?= e($s['reporter_contact']) ?>" class="sim-contact px-4 py-2.5 rounded-lg bg-green-600 text-white hover:opacity-90 transition">WhatsApp</button>
             <a href="https://maps.google.com/?q=<?= e($s['latitude']) ?>,<?= e($s['longitude']) ?>" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-lg bg-brand text-white hover:opacity-90 transition">📍 Buka peta</a>
           </div>
           <div class="flex flex-wrap gap-2 mt-3 text-sm font-semibold border-t dark:border-slate-700 pt-3">
@@ -188,10 +189,10 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
             <td class="p-3 font-mono"><?= e($x['ticket_number']) ?></td>
             <td class="p-3"><?php if ($x['is_emergency']): ?><span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white mr-1">DARURAT</span><?php endif; ?><b><?= e($x['title']) ?></b><div class="text-xs text-gray-400"><?= e(trim(($x['district'] ?? '') . ', ' . ($x['regency'] ?? ''), ', ')) ?></div></td>
             <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold <?= $prioBadge[$x['priority']] ?? 'bg-gray-100 text-gray-600' ?>"><?= e($x['priority'] ?? '-') ?></span></td>
-            <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold <?= $badge[$x['current_status']] ?? '' ?>"><?= e($statusLbl[$x['current_status']]) ?></span></td>
+            <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold <?= $badge[$x['current_status']] ?? '' ?>"><?= e($statusLbl[$x['current_status']]) ?></span><?php if ($x['handler']): ?><div class="text-xs text-gray-400 mt-1">oleh <?= e($x['handler']) ?></div><?php endif; ?></td>
             <td class="p-3 whitespace-nowrap"><?= e(date('d M Y H:i', strtotime($x['created_at']))) ?></td>
             <td class="p-3 text-right whitespace-nowrap">
-              <?php if ($x['current_status'] === 'diverifikasi'): ?><button data-id="<?= (int)$x['id'] ?>" data-act="proses" class="st-act px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 font-semibold hover:brightness-95 transition">Mulai proses</button><?php endif; ?>
+              <?php if ($x['current_status'] === 'diverifikasi'): ?><button data-id="<?= (int)$x['id'] ?>" data-act="proses" data-cat="<?= e($x['category']) ?>" class="st-act px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 font-semibold hover:brightness-95 transition">Mulai proses</button><?php endif; ?>
               <button data-id="<?= (int)$x['id'] ?>" data-act="selesai" class="st-act px-4 py-2 rounded-lg bg-brand text-white font-semibold hover:opacity-90 transition">Selesaikan</button>
             </td>
           </tr>
@@ -233,7 +234,6 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
       <textarea id="v-instr" class="mt-1 h-40 px-3 py-2.5 rounded-lg border dark:bg-slate-800 dark:border-slate-600" placeholder="Hasil konfirmasi ke Ketua RT/RW. Untuk penolakan, tulis alasannya di sini."></textarea>
       <div class="mt-5 flex flex-wrap gap-2 justify-end">
         <button data-act="tolak" class="act px-4 py-2.5 rounded-lg border-2 border-red-500 text-red-500 font-semibold hover:bg-red-50 dark:hover:bg-red-950 transition">Tolak</button>
-        <button data-act="eskalasi" class="act px-4 py-2.5 rounded-lg bg-yellow-400 text-gray-900 font-semibold hover:brightness-95 transition">Eskalasi Instansi</button>
         <button data-act="terima" class="act px-4 py-2.5 rounded-lg bg-brand text-white font-semibold hover:opacity-90 transition">Terima &amp; Broadcast WA</button>
       </div>
       <button id="v-close" class="mt-3 text-sm text-gray-500 hover:underline self-end">Tutup</button>
@@ -256,16 +256,60 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
   document.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => show(b.dataset.nav));
   show(location.hash.slice(1));
 
-  // Penanganan lapangan: diverifikasi -> diproses -> selesai (api/update_status.php)
+  // SEMUA aksi kirim/hubungi di bawah ini SIMULASI: tidak ada pesan WA, telepon, atau eskalasi yang sungguh dikirim ke mana pun.
+  const escH = t => String(t).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+  // Tombol Telepon / WhatsApp pelapor darurat -> hanya pop-up simulasi (tanpa link tel: / wa.me)
+  document.querySelectorAll('.sim-contact').forEach(b => b.onclick = () => Swal.fire({
+    icon: 'info', title: b.dataset.kind === 'telepon' ? 'Menghubungi pelapor…' : 'Membuka WhatsApp…',
+    html: `<p style="margin:0"><b>${escH(b.dataset.to)}</b></p><p style="margin:10px 0 0;font-size:.85rem;color:#6b7280">Mode simulasi: tidak ada panggilan atau pesan yang dikirim.</p>`,
+    confirmButtonText: 'Tutup', confirmButtonColor: '#0D47A1'}));
+
+  // Penanganan lapangan: diverifikasi -> diproses (pilih pihak penangani = eskalasi) -> selesai (api/update_status.php)
+  const PIHAK = ['BPBD', 'Damkar', 'Dinas PU / Bina Marga', 'Dinas Perhubungan / PLN', 'Relawan / Linmas desa'];
+  const PIHAK_DESA = 'Relawan / Linmas desa';
+  const PIHAK_DEFAULT = {banjir: 'BPBD', pohon_tumbang: 'Damkar', lampu_mati: 'Dinas Perhubungan / PLN', jalan_rusak: 'Dinas PU / Bina Marga'};
+  const fld = 'display:block;width:100%;box-sizing:border-box;margin:6px 0 12px;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:1rem';
   document.querySelectorAll('.st-act').forEach(b => b.onclick = async () => {
     const proses = b.dataset.act === 'proses';
-    const r = await Swal.fire({title: proses ? 'Mulai proses penanganan?' : 'Tandai penanganan selesai?', input: 'text', inputLabel: 'Catatan progres (opsional)',
-      inputPlaceholder: proses ? 'Contoh: tim berangkat ke lokasi' : 'Contoh: jalan sudah dapat dilalui', inputAttributes: {maxlength: 300},
-      showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#0D47A1'});
+    let r;
+    if (proses) {
+      const def = PIHAK_DEFAULT[b.dataset.cat] || '';
+      r = await Swal.fire({
+        title: 'Mulai proses penanganan?',
+        html: `<div style="text-align:left;font-size:.9rem">
+          <label for="h-sel" style="font-weight:600">Pihak penangani</label>
+          <select id="h-sel" style="${fld}"><option value="">Pilih pihak penangani</option>${PIHAK.map(p => `<option value="${escH(p)}"${p === def ? ' selected' : ''}>${escH(p)}</option>`).join('')}<option value="__lain">Lainnya…</option></select>
+          <input id="h-lain" placeholder="Tulis nama pihak penangani" maxlength="100" style="${fld};display:none">
+          <label for="h-note" style="font-weight:600">Catatan progres (opsional)</label>
+          <input id="h-note" placeholder="Contoh: tim berangkat ke lokasi" maxlength="300" style="${fld}"></div>`,
+        showCancelButton: true, confirmButtonText: 'Eskalasi', cancelButtonText: 'Batal', confirmButtonColor: '#0D47A1',
+        didOpen: () => {
+          const p = Swal.getPopup(), sel = p.querySelector('#h-sel'), lain = p.querySelector('#h-lain'), ok = Swal.getConfirmButton();
+          const sync = () => { lain.style.display = sel.value === '__lain' ? 'block' : 'none'; ok.textContent = sel.value === PIHAK_DESA ? 'Mulai proses' : 'Eskalasi'; };
+          sel.onchange = sync; sync();
+        },
+        preConfirm: () => {
+          const p = Swal.getPopup(), v = p.querySelector('#h-sel').value, who = v === '__lain' ? p.querySelector('#h-lain').value.trim() : v;
+          if (!who) { Swal.showValidationMessage('Pilih atau tulis pihak yang menangani.'); return false; }
+          return {who, note: p.querySelector('#h-note').value.trim()};
+        }});
+    } else {
+      r = await Swal.fire({title: 'Tandai penanganan selesai?', input: 'text', inputLabel: 'Catatan progres (opsional)',
+        inputPlaceholder: 'Contoh: jalan sudah dapat dilalui', inputAttributes: {maxlength: 300},
+        showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#0D47A1'});
+    }
     if (!r.isConfirmed) return;
-    const fd = new FormData(); fd.append('id', b.dataset.id); fd.append('action', b.dataset.act); fd.append('note', r.value || '');
+    const fd = new FormData(); fd.append('id', b.dataset.id); fd.append('action', b.dataset.act);
+    fd.append('note', proses ? r.value.note : (r.value || '')); if (proses) fd.append('handler', r.value.who);
     const res = await (await fetch('api/update_status.php', {method: 'POST', body: fd})).json();
-    if (res.ok) { location.hash = 'penanganan'; location.reload(); } else Swal.fire('Gagal', res.message, 'error');
+    if (!res.ok) return Swal.fire('Gagal', res.message, 'error');
+    if (proses && res.message_preview) {
+      await Swal.fire({icon: 'info', title: 'Eskalasi disimulasikan', confirmButtonText: 'Tutup', confirmButtonColor: '#0D47A1',
+        html: `<p style="margin:0 0 8px;font-size:.85rem">Pesan ke <b>${escH(res.handler)}</b> (SIMULASI, tidak ada yang dikirim):</p>
+               <pre style="text-align:left;white-space:pre-wrap;margin:0;font:13px/1.5 inherit;background:#f3f4f6;padding:12px;border-radius:10px;max-height:240px;overflow:auto">${escH(res.message_preview)}</pre>`});
+    }
+    location.hash = 'penanganan'; location.reload();
   });
 
   // Aksi sinyal darurat: sedang ditangani / selesai / palsu
@@ -313,7 +357,7 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
 
   document.querySelectorAll('.act').forEach(btn => btn.onclick = async () => {
     const act = btn.dataset.act;
-    const ask = {tolak: 'Tolak laporan ini?', eskalasi: 'Eskalasi ke instansi?', terima: 'Terima dan broadcast ke grup warga?'}[act];
+    const ask = {tolak: 'Tolak laporan ini?', terima: 'Terima dan broadcast ke grup warga?'}[act];
     if (!(await Swal.fire({title: ask, text: 'Pastikan sudah konfirmasi ke Ketua RT/RW.', icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, lanjut', cancelButtonText: 'Batal'})).isConfirmed) return;
     const fd = new FormData(); fd.append('id', cur); fd.append('action', act);
     fd.append('priority', $('#v-prio').value); fd.append('instruction', $('#v-instr').value);

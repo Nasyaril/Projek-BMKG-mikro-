@@ -102,7 +102,8 @@ $('#status-form').addEventListener('submit', async ev => {
   const todo = (last === 'selesai' || last === 'ditolak') ? '' : '<li class="todo">Selesai<br><small>(belum selesai)</small></li>';
   const upd = [];
   if (r.admin_instruction) upd.push(`<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>Admin</h4><p style="white-space:pre-line;display:block">${esc(r.admin_instruction)}</p></div></article>`);
-  res.assignments.forEach(a => upd.push(`<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>Tim Lapangan</h4><p>${a.completed_at ? 'Penanganan selesai.' : 'Penanganan sedang dilakukan di lokasi.'}</p>${a.photo_after_path ? `<img src="${esc(a.photo_after_path)}" alt="Foto hasil penanganan">` : ''}<small>${esc(fmt(a.completed_at))}</small></div></article>`));
+  const who = a => a.handler_name ? (a.completed_at ? 'Ditangani oleh: ' : 'Sedang ditangani oleh: ') + a.handler_name : 'Penanganan';
+  res.assignments.forEach(a => upd.push(`<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>${esc(who(a))}</h4><p>${a.completed_at ? 'Penanganan selesai.' : 'Penanganan sedang dilakukan di lokasi.'}</p>${a.photo_after_path ? `<img src="${esc(a.photo_after_path)}" alt="Foto hasil penanganan">` : ''}<small>${esc(fmt(a.completed_at))}</small></div></article>`));
   out.innerHTML = `<h3 class="hd">Hasil Pencarian</h3>${reportCard(r, 'style="cursor:default"')}
     <h3 class="hd">Timeline Status</h3><ul class="tl sec">${steps.map(s => `<li><b>${esc(s.l)}</b><br><small>${esc(fmt(s.t))}</small></li>`).join('')}${todo}</ul>
     ${upd.length ? `<h3 class="hd">Pembaruan Penanganan</h3>${upd.join('')}` : ''}`;
