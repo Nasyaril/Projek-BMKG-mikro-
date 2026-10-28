@@ -295,13 +295,30 @@ $nice = fn(string $s) => ucwords(str_replace('_', ' ', $s));
           return {who, note: p.querySelector('#h-note').value.trim()};
         }});
     } else {
-      r = await Swal.fire({title: 'Tandai penanganan selesai?', input: 'text', inputLabel: 'Catatan progres (opsional)',
-        inputPlaceholder: 'Contoh: jalan sudah dapat dilalui', inputAttributes: {maxlength: 300},
-        showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#0D47A1'});
+      r = await Swal.fire({
+        title: 'Tandai penanganan selesai?',
+        html: `<div style="text-align:left;font-size:.9rem">
+          <label for="f-note" style="font-weight:600">Catatan penyelesaian (opsional)</label>
+          <input id="f-note" placeholder="Contoh: jalan sudah dapat dilalui" maxlength="300" style="${fld}">
+          <label for="f-photo" style="font-weight:600">Foto dokumentasi (opsional)</label>
+          <input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" style="${fld}">
+          <img id="f-prev" alt="Pratinjau foto" style="display:none;width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin:0 0 4px"></div>`,
+        showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#0D47A1',
+        didOpen: () => {
+          const p = Swal.getPopup(), inp = p.querySelector('#f-photo'), prev = p.querySelector('#f-prev');
+          inp.onchange = () => { const f = inp.files[0]; if (f && f.type.startsWith('image/')) { prev.src = URL.createObjectURL(f); prev.style.display = 'block'; } else prev.style.display = 'none'; };
+        },
+        preConfirm: () => {
+          const p = Swal.getPopup(), f = p.querySelector('#f-photo').files[0] || null;
+          if (f && !/^image\/(jpeg|png|webp)$/.test(f.type)) { Swal.showValidationMessage('Foto harus JPG, PNG, atau WEBP.'); return false; }
+          if (f && f.size > 10 * 1024 * 1024) { Swal.showValidationMessage('Ukuran foto maksimal 10 MB.'); return false; }
+          return {note: p.querySelector('#f-note').value.trim(), photo: f};
+        }});
     }
     if (!r.isConfirmed) return;
     const fd = new FormData(); fd.append('id', b.dataset.id); fd.append('action', b.dataset.act);
-    fd.append('note', proses ? r.value.note : (r.value || '')); if (proses) fd.append('handler', r.value.who);
+    fd.append('note', r.value.note); if (proses) fd.append('handler', r.value.who); else if (r.value.photo) fd.append('photo', r.value.photo);
+    Swal.fire({title: proses ? 'Menyimpan…' : (r.value.photo ? 'Mengunggah foto…' : 'Menyimpan…'), allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading()});
     const res = await (await fetch('api/update_status.php', {method: 'POST', body: fd})).json();
     if (!res.ok) return Swal.fire('Gagal', res.message, 'error');
     if (proses && res.message_preview) {

@@ -153,6 +153,9 @@ function ic(string $n): string { return '<svg class="i" aria-hidden="true"><use 
   <button type="button" class="btn-primary wide" id="sos-close">Tutup</button>
 </div></div>
 
+<!-- Detail laporan (popup, bisa di-scroll) -->
+<div class="modal" id="detail-modal" role="dialog" aria-label="Detail laporan"><div class="box" id="detail-box"></div></div>
+
 <!-- Pemilih wilayah -->
 <div class="modal" id="area-modal" role="dialog" aria-label="Pilih wilayah"><div class="box">
   <h3>Pilih wilayah</h3><p style="color:var(--muted);font-size:.85rem">Peta, daftar laporan, dan laporan baru akan mengikuti wilayah ini.</p>

@@ -97,13 +97,25 @@ $('#status-form').addEventListener('submit', async ev => {
   const res = await fetchStatus($('#st-t').value.trim(), $('#st-c').value.trim());
   if (!res.ok) { out.innerHTML = `<p style="color:var(--red);margin-top:12px">${esc(res.message)}</p>`; return; }
   const r = res.report, last = res.history.at(-1)?.status_name;
-  const steps = res.history.flatMap(h => [{l: TL[h.status_name] || h.status_name, t: h.change_time},
+  const pihak = res.assignments.find(a => a.handler_name)?.handler_name;   // nama pihak untuk label "Dieskalasi ke ..."
+  const steps = res.history.flatMap(h => [{l: h.status_name === 'dieskalasi' && pihak ? 'Dieskalasi ke ' + pihak : (TL[h.status_name] || h.status_name), t: h.change_time},
     ...(h.status_name === 'diverifikasi' && PRIO[r.priority] ? [{l: 'Prioritas: ' + r.priority[0].toUpperCase() + r.priority.slice(1), t: h.change_time}] : [])]);
   const todo = (last === 'selesai' || last === 'ditolak') ? '' : '<li class="todo">Selesai<br><small>(belum selesai)</small></li>';
   const upd = [];
-  if (r.admin_instruction) upd.push(`<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>Admin</h4><p style="white-space:pre-line;display:block">${esc(r.admin_instruction)}</p></div></article>`);
+  // Pembaruan penanganan: tiap kartu berlabel jelas + waktu, supaya instruksi verifikasi dan catatan penanganan tidak tercampur
+  const hTime = (...n) => res.history.find(h => n.includes(h.status_name))?.change_time;
+  const card = (title, body) => `<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>${esc(title)}</h4>${body}</div></article>`;
+  const note = (label, txt) => `<p style="white-space:pre-line;display:block"><b>${label}:</b> ${esc(txt)}</p>`;
+  const when = (label, t) => t ? `<small>${label}: ${esc(fmt(t))}</small>` : '';
+  const tolak = r.current_status === 'ditolak';
+  if (r.admin_instruction) upd.push(card(tolak ? 'Alasan penolakan' : 'Instruksi admin',
+    `<p style="white-space:pre-line;display:block">${esc(r.admin_instruction)}</p>` + when(tolak ? 'Ditolak' : 'Diverifikasi', hTime('diverifikasi', 'ditolak'))));
   const who = a => a.handler_name ? (a.completed_at ? 'Ditangani oleh: ' : 'Sedang ditangani oleh: ') + a.handler_name : 'Penanganan';
-  res.assignments.forEach(a => upd.push(`<article class="item upd" style="cursor:default"><div class="circ">${ic('user')}</div><div class="grow"><h4>${esc(who(a))}</h4><p>${a.completed_at ? 'Penanganan selesai.' : 'Penanganan sedang dilakukan di lokasi.'}</p>${a.photo_after_path ? `<img src="${esc(a.photo_after_path)}" alt="Foto hasil penanganan">` : ''}<small>${esc(fmt(a.completed_at))}</small></div></article>`));
+  res.assignments.forEach(a => upd.push(card(who(a),
+    `<p style="display:block">${a.completed_at ? 'Penanganan selesai.' : 'Penanganan sedang dilakukan di lokasi.'}</p>`
+    + (a.start_note ? note('Catatan', a.start_note) : '') + (a.finish_note ? note('Catatan penyelesaian', a.finish_note) : '')
+    + (a.photo_after_path ? `<small>Dokumentasi penyelesaian</small><img class="doc-photo" src="${esc(a.photo_after_path)}" alt="Foto dokumentasi penyelesaian" onerror="this.remove()">` : '')
+    + when('Mulai ditangani', hTime('diproses')) + when('Selesai', a.completed_at))));
   out.innerHTML = `<h3 class="hd">Hasil Pencarian</h3>${reportCard(r, 'style="cursor:default"')}
     <h3 class="hd">Timeline Status</h3><ul class="tl sec">${steps.map(s => `<li><b>${esc(s.l)}</b><br><small>${esc(fmt(s.t))}</small></li>`).join('')}${todo}</ul>
     ${upd.length ? `<h3 class="hd">Pembaruan Penanganan</h3>${upd.join('')}` : ''}`;

@@ -7,7 +7,9 @@ $where = ["current_status IN ('diverifikasi','diproses','selesai')"]; $params = 
 foreach (['province', 'regency', 'district'] as $col) {
     if (!empty($_GET[$col])) { $where[] = "$col = ?"; $params[] = mb_substr($_GET[$col], 0, 80); }
 }
-$st = $pdo->prepare('SELECT id, is_emergency, upvote_count, ticket_number, photo_before_path, incident_time, title, category, description, priority, latitude, longitude, current_status, created_at
+$st = $pdo->prepare('SELECT id, is_emergency, upvote_count, ticket_number, photo_before_path, incident_time, title, category, description, impacts, district, regency, admin_instruction, priority, latitude, longitude, current_status, created_at,
+                            (SELECT handler_name FROM assignments a WHERE a.report_id=reports.id ORDER BY a.id DESC LIMIT 1) AS handler,
+                            (SELECT photo_after_path FROM assignments a2 WHERE a2.report_id=reports.id ORDER BY a2.id DESC LIMIT 1) AS photo_after
                      FROM reports WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC LIMIT 200');
 $st->execute($params);
 $rows = $st->fetchAll();
